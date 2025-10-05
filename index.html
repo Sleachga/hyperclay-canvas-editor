@@ -1,0 +1,2088 @@
+<html lang="en" editmode="false" pageowner="false">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hyperclay SVG Editor</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          sans-serif;
+        background: linear-gradient(
+          135deg,
+          #1a1a1a 0%,
+          #2d2d2d 50%,
+          #1f1f1f 100%
+        );
+        color: #e0e0e0;
+        overflow: hidden;
+        height: 100vh;
+      }
+
+      /* Menu Bar */
+      .menu-bar {
+        height: 32px;
+        background: #1e1e1e;
+        border-bottom: 1px solid #3a3a3a;
+        display: flex;
+        align-items: center;
+        padding: 0 12px;
+        gap: 16px;
+      }
+
+      .menu-item {
+        font-size: 13px;
+        padding: 6px 12px;
+        cursor: pointer;
+        transition: background 0.2s;
+        border-radius: 4px;
+      }
+
+      .menu-item:hover {
+        background: rgba(255, 255, 255, 0.1);
+      }
+
+      /* Main Layout */
+      .main-container {
+        display: flex;
+        height: calc(100vh - 32px);
+      }
+
+      /* Left Sidebar */
+      .left-sidebar {
+        width: 240px;
+        background: #1e1e1e;
+        border-right: 1px solid #3a3a3a;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .panel {
+        border-bottom: 1px solid #3a3a3a;
+        padding: 12px;
+      }
+
+      .panel-title {
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        opacity: 0.7;
+        margin-bottom: 12px;
+      }
+
+      /* SVG Area */
+      .svg-container {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        position: relative;
+        background: #d0d0d0; /* Illustrator-style gray workspace */
+      }
+
+      #editor-canvas {
+        width: 100%;
+        height: 100%;
+        background: #ffffff;
+      }
+
+      /* Right Toolbar */
+      .right-toolbar {
+        width: 88px;
+        background: #1e1e1e;
+        border-left: 1px solid #3a3a3a;
+        display: grid;
+        grid-template-columns: repeat(2, 44px);
+        grid-auto-rows: 44px;
+        padding: 0;
+        gap: 0;
+      }
+
+      .tool-btn {
+        width: 44px;
+        height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s;
+        position: relative;
+        color: #e0e0e0;
+        border-right: 1px solid #3a3a3a;
+        border-bottom: 1px solid #3a3a3a;
+      }
+
+      .tool-btn:hover {
+        background: rgba(255, 255, 255, 0.1);
+      }
+
+      .tool-btn.active {
+        background: rgba(20, 115, 230, 0.3);
+        color: #1473e6;
+      }
+
+      .tool-btn svg {
+        width: 20px;
+        height: 20px;
+        fill: currentColor;
+      }
+
+      /* Property Row Layout */
+      .property-row {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 12px;
+        align-items: flex-end;
+      }
+
+      .property-col {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .property-value {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .prop-label {
+        font-size: 11px;
+        opacity: 0.7;
+      }
+
+      /* Color Picker */
+      .color-input {
+        width: 48px;
+        height: 32px;
+        border: 1px solid #3a3a3a;
+        background: #2b2b2b;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+
+      /* Hex Input */
+      .hex-input {
+        width: 100%;
+        height: 32px;
+        border: 1px solid #3a3a3a;
+        background: #2b2b2b;
+        border-radius: 4px;
+        color: #e0e0e0;
+        padding: 0 10px;
+        font-size: 12px;
+        font-family: monospace;
+      }
+
+      .hex-input:focus {
+        outline: none;
+        border-color: #1473e6;
+      }
+
+      /* Stroke Width Input */
+      .stroke-width-input {
+        width: 100%;
+        height: 32px;
+        border: 1px solid #3a3a3a;
+        background: #2b2b2b;
+        border-radius: 4px;
+        color: #e0e0e0;
+        padding: 0 10px;
+        font-size: 12px;
+      }
+
+      .stroke-width-input:focus {
+        outline: none;
+        border-color: #1473e6;
+      }
+
+      /* Properties Bar */
+      .properties-bar {
+        height: 40px;
+        background: #1e1e1e;
+        border-bottom: 1px solid #3a3a3a;
+        display: flex;
+        align-items: center;
+        padding: 0 12px;
+        gap: 12px;
+        font-size: 12px;
+      }
+
+      .prop-input {
+        background: #2b2b2b;
+        border: 1px solid #3a3a3a;
+        color: #e0e0e0;
+        padding: 4px 8px;
+        border-radius: 4px;
+        width: 60px;
+        font-size: 12px;
+      }
+
+      .prop-label {
+        font-size: 11px;
+        opacity: 0.7;
+      }
+
+      /* SVG Styles */
+      .svg-object {
+        cursor: pointer;
+      }
+
+      /* Selection is now handled by highlight layer */
+
+      /* Resize handles */
+      .resize-handle {
+        cursor: pointer;
+      }
+
+      /* Rotation handle */
+      .rotation-handle {
+        cursor: grab;
+      }
+
+      .rotation-handle:active {
+        cursor: grabbing;
+      }
+
+      #layers-panel {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+
+      .layer-item {
+        padding: 8px 10px;
+        margin-bottom: 1px;
+        background: #2b2b2b;
+        border-radius: 3px;
+        border-left: 2px solid transparent;
+        cursor: pointer;
+        font-size: 11.5px;
+        transition: all 0.2s;
+        user-select: none;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .layer-info {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex: 1;
+        min-width: 0;
+      }
+
+      .layer-item.selected {
+        background: rgba(20, 115, 230, 0.15);
+        border-left-color: #1473e6;
+      }
+
+      .layer-item:hover:not(.selected) {
+        background: rgba(255, 255, 255, 0.1);
+      }
+
+      .layer-icon {
+        flex-shrink: 0;
+      }
+
+      .layer-name {
+        outline: none;
+        cursor: text;
+        user-select: text;
+        border-radius: 2px;
+        padding: 0 2px;
+        transition: background 0.15s;
+        letter-spacing: 0.01em;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .layer-name[contenteditable="true"] {
+        background: rgba(20, 115, 230, 0.3);
+        box-shadow: 0 0 0 1px #1473e6;
+        cursor: text;
+        overflow: visible;
+        white-space: normal;
+      }
+    </style>
+    <link rel="stylesheet" href="https://hyperclay.com/css/micromodal.css" />
+
+    <style class="toast-styles" save-ignore="">
+      .toast-container {
+        z-index: 9999;
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: end;
+        gap: 18px;
+      }
+
+      .toast {
+        position: relative;
+        right: 0;
+        cursor: pointer;
+        transition: right 0.5s ease-in-out, opacity 0.5s ease-in-out;
+      }
+
+      .toast.hide {
+        right: -400px;
+        opacity: 0;
+      }
+
+      .toast-modern {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 16px 24px 16px 16px;
+        font-size: 16px;
+        font-family: monospace;
+        font-weight: bold;
+        color: white;
+        border-width: 1px;
+        border-style: solid;
+      }
+
+      .toast-modern.success {
+        border-color: #358234;
+        background: radial-gradient(
+          85.86% 68.42% at 50% 68.42%,
+          #142419 0%,
+          #1d3927 100%
+        );
+      }
+
+      .toast-modern.error {
+        border-color: #992930;
+        background: radial-gradient(
+          85.86% 68.42% at 50% 68.42%,
+          #240a13 0%,
+          #481826 100%
+        );
+      }
+
+      .toast-icon {
+        position: relative;
+        top: -1px;
+      }
+
+      .toast-icon svg {
+        width: 22px;
+        height: 22px;
+      }
+
+      .toast-message {
+        position: relative;
+        top: -1px;
+      }
+
+      .noise-texture {
+        position: relative;
+      }
+
+      .noise-texture::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        opacity: 0.12;
+        pointer-events: none;
+        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.2' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+        background-repeat: repeat;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Menu Bar -->
+    <div class="menu-bar">
+      <div class="menu-item">File</div>
+      <div class="menu-item">Edit</div>
+      <div class="menu-item">Object</div>
+      <div class="menu-item">Arrange</div>
+      <div class="menu-item">View</div>
+      <div class="menu-item">Help</div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="main-container">
+      <!-- Left Sidebar -->
+      <div class="left-sidebar" option:pageowner="">
+        <div class="panel">
+          <div class="panel-title">Layers</div>
+          <ul
+            id="layers-panel"
+            sortable=""
+            onbeforesave="this.innerHTML = ''"
+          ></ul>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">Properties</div>
+          <div id="properties-panel">
+            <div class="property-row">
+              <div class="property-col">
+                <div class="prop-label">Fill</div>
+                <input
+                  type="color"
+                  class="color-input"
+                  id="fill-color"
+                  value="#c16c6c"
+                  persist=""
+                />
+              </div>
+              <div class="property-value">
+                <input
+                  type="text"
+                  class="hex-input"
+                  id="fill-hex"
+                  value="#000000"
+                  placeholder="#000000"
+                  maxlength="7"
+                  persist=""
+                />
+              </div>
+            </div>
+            <div class="property-row">
+              <div class="property-col">
+                <div class="prop-label">Stroke</div>
+                <input
+                  type="color"
+                  class="color-input"
+                  id="stroke-color"
+                  value="#000000"
+                  persist=""
+                />
+              </div>
+              <div class="property-value">
+                <input
+                  type="number"
+                  class="stroke-width-input"
+                  id="stroke-width"
+                  value="7"
+                  min="0"
+                  max="100"
+                  step="1"
+                  persist=""
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SVG Container -->
+      <div class="svg-container">
+        <div
+          style="position: absolute; top: 0; left: 0; right: 0"
+          option:pageowner=""
+        >
+          <div class="properties-bar">
+            <span class="prop-label">X:</span>
+            <input type="number" class="prop-input trigger-save" id="prop-x" />
+            <span class="prop-label">Y:</span>
+            <input type="number" class="prop-input trigger-save" id="prop-y" />
+            <span class="prop-label">W:</span>
+            <input type="number" class="prop-input trigger-save" id="prop-w" />
+            <span class="prop-label">H:</span>
+            <input type="number" class="prop-input trigger-save" id="prop-h" />
+            <span class="prop-label">°:</span>
+            <input
+              type="number"
+              class="prop-input trigger-save"
+              id="prop-rotation"
+              min="0"
+              max="360"
+              step="1"
+              value="0"
+            />
+          </div>
+        </div>
+
+        <svg
+          id="editor-canvas"
+          width="100%"
+          height="100%"
+          data-viewport-x="0"
+          data-viewport-y="0"
+          data-viewport-zoom="1"
+        >
+          <g id="viewport-group" transform="translate(0,0) scale(1)">
+            <rect
+              x="188"
+              y="244"
+              width="248"
+              height="158"
+              fill="#ff0000"
+              stroke="#000000"
+              stroke-width="7"
+              class="svg-object"
+              data-id="1"
+              transform="rotate(325.249390340349, 312, 323)"
+            ></rect>
+            <ellipse
+              cx="341"
+              cy="220"
+              rx="161"
+              ry="115"
+              fill="#c16c6c"
+              stroke="#000000"
+              stroke-width="7"
+              class="svg-object"
+              data-id="2"
+              transform="rotate(38.10456935285356, 341, 220)"
+            ></ellipse>
+            <g id="highlight-layer">
+              <g id="hover-highlights"></g>
+              <g id="selection-highlights"></g>
+            </g>
+          </g>
+        </svg>
+      </div>
+
+      <!-- Right Toolbar -->
+      <div class="right-toolbar" option:pageowner="">
+        <div
+          class="tool-btn active"
+          data-tool="select"
+          data-tooltip="Selection (V)"
+        >
+          <svg viewBox="0 0 24 24">
+            <path d="M3,3 L10,20 L13,13 L20,10 Z" fill="currentColor"></path>
+          </svg>
+        </div>
+        <div
+          class="tool-btn"
+          data-tool="rectangle"
+          data-tooltip="Rectangle (M)"
+        >
+          <svg viewBox="0 0 24 24">
+            <rect
+              x="4"
+              y="6"
+              width="16"
+              height="12"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            ></rect>
+          </svg>
+        </div>
+        <div class="tool-btn" data-tool="circle" data-tooltip="Circle (L)">
+          <svg viewBox="0 0 24 24">
+            <circle
+              cx="12"
+              cy="12"
+              r="8"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            ></circle>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hyperclay Starter Kit -->
+    <script
+      src="https://hyperclay.com/js/hyperclay-starter-kit.js"
+      type="module"
+    ></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script>
+      // ========================================
+      // STATE
+      // ========================================
+      let currentTool = "select";
+      let $selectedObject = null;
+      let nextObjectId = 1;
+
+      const $svg = $("#editor-canvas");
+      const $viewport = $("#viewport-group");
+
+      // Initialize nextObjectId based on existing objects
+      $(".svg-object").each(function () {
+        const id = parseInt($(this).attr("data-id"));
+        if (!isNaN(id) && id >= nextObjectId) {
+          nextObjectId = id + 1;
+        }
+      });
+
+      // Drawing state
+      let isDrawing = false;
+      let isDragging = false;
+      let hasDragged = false; // Track if actual movement occurred
+      let startX, startY;
+      let dragStartRotation = 0;
+      let $tempShape = null;
+
+      // Pan state
+      let isPanning = false;
+      let isSpacePressed = false;
+      let isShiftPressed = false;
+      let panStartX, panStartY;
+
+      // Resize state
+      let isResizing = false;
+      let hasResized = false; // Track if actual resizing occurred
+      let activeHandle = null;
+      let resizeStartBBox = null;
+      let resizeStartMouse = null;
+
+      // Rotation state
+      let isRotating = false;
+      let hasRotated = false; // Track if actual rotation occurred
+      let rotationStartAngle = null;
+      let rotationStartMouse = null;
+      let rotationCenter = null;
+
+      // Selection observer (for reactive highlight updates)
+      let selectionObserver = null;
+
+      // ========================================
+      // PERSISTENCE
+      // ========================================
+      function triggerSave() {
+        console.log("triggerSave called, hostname:", location.hostname);
+        console.log("hyperclay available?", typeof hyperclay !== "undefined");
+        console.log(
+          "hyperclay.savePage available?",
+          typeof hyperclay !== "undefined" &&
+            typeof hyperclay.savePage === "function"
+        );
+
+        if (
+          location.hostname === "localhost" ||
+          location.hostname === "127.0.0.1"
+        ) {
+          // For localhost: clone DOM, clean it, then save
+          const clone = document.documentElement.cloneNode(true);
+
+          // Remove selected classes
+          clone
+            .querySelectorAll(".selected")
+            .forEach((el) => el.classList.remove("selected"));
+
+          // Clear layers panel (it's dynamically generated)
+          const layersPanel = clone.querySelector("#layers-panel");
+          if (layersPanel) {
+            layersPanel.innerHTML = "";
+          }
+
+          // Clear highlight layer before save
+          const highlightLayer = clone.querySelector("#highlight-layer");
+          if (highlightLayer) {
+            highlightLayer.innerHTML =
+              '<g id="hover-highlights"></g><g id="selection-highlights"></g>';
+          }
+
+          fetch("/save/index", {
+            method: "POST",
+            headers: { "Content-Type": "text/plain" },
+            body: clone.outerHTML,
+          });
+        } else if (typeof hyperclay !== "undefined" && hyperclay.savePage) {
+          console.log("Calling hyperclay.savePage()");
+          // Hyperclay hosted - use savePage()
+          hyperclay.savePage();
+        } else {
+          console.warn(
+            "No save method available! Not localhost and hyperclay.savePage not found"
+          );
+        }
+      }
+
+      // ========================================
+      // ROTATION HELPERS
+      // ========================================
+      function getRotation($obj) {
+        const transform = $obj.attr("transform") || "";
+        const match = transform.match(/rotate\(([-\d.]+)/);
+        return match ? parseFloat(match[1]) : 0;
+      }
+
+      function setRotation($obj, angle) {
+        const tagName = $obj.prop("tagName");
+        let cx, cy;
+
+        if (tagName === "rect") {
+          const x = parseFloat($obj.attr("x"));
+          const y = parseFloat($obj.attr("y"));
+          const width = parseFloat($obj.attr("width"));
+          const height = parseFloat($obj.attr("height"));
+          cx = x + width / 2;
+          cy = y + height / 2;
+        } else if (tagName === "ellipse") {
+          cx = parseFloat($obj.attr("cx"));
+          cy = parseFloat($obj.attr("cy"));
+        }
+
+        // Normalize angle to 0-360
+        angle = ((angle % 360) + 360) % 360;
+
+        if (angle === 0) {
+          $obj.attr("transform", "");
+        } else {
+          $obj.attr("transform", `rotate(${angle}, ${cx}, ${cy})`);
+        }
+      }
+
+      function getCenter($obj) {
+        const tagName = $obj.prop("tagName");
+        let cx, cy;
+
+        if (tagName === "rect") {
+          const x = parseFloat($obj.attr("x"));
+          const y = parseFloat($obj.attr("y"));
+          const width = parseFloat($obj.attr("width"));
+          const height = parseFloat($obj.attr("height"));
+          cx = x + width / 2;
+          cy = y + height / 2;
+        } else if (tagName === "ellipse") {
+          cx = parseFloat($obj.attr("cx"));
+          cy = parseFloat($obj.attr("cy"));
+        }
+
+        return { cx, cy };
+      }
+
+      function moveShape($obj, dx, dy) {
+        const tagName = $obj.prop("tagName");
+
+        if (tagName === "rect") {
+          const x = parseFloat($obj.attr("x")) + dx;
+          const y = parseFloat($obj.attr("y")) + dy;
+          $obj.attr("x", x);
+          $obj.attr("y", y);
+        } else if (tagName === "ellipse") {
+          const cx = parseFloat($obj.attr("cx")) + dx;
+          const cy = parseFloat($obj.attr("cy")) + dy;
+          $obj.attr("cx", cx);
+          $obj.attr("cy", cy);
+        }
+
+        // Update rotation center if shape is rotated (rotation center follows the shape)
+        const rotation = getRotation($obj);
+        if (rotation !== 0) {
+          setRotation($obj, rotation);
+        }
+      }
+
+      function setShapeFromBBox($obj, bbox) {
+        const tagName = $obj.prop("tagName");
+
+        if (tagName === "rect") {
+          $obj.attr("x", bbox.x);
+          $obj.attr("y", bbox.y);
+          $obj.attr("width", bbox.width);
+          $obj.attr("height", bbox.height);
+        } else if (tagName === "ellipse") {
+          const cx = bbox.x + bbox.width / 2;
+          const cy = bbox.y + bbox.height / 2;
+          const rx = bbox.width / 2;
+          const ry = bbox.height / 2;
+          $obj.attr("cx", cx);
+          $obj.attr("cy", cy);
+          $obj.attr("rx", rx);
+          $obj.attr("ry", ry);
+        }
+
+        // Update rotation center if shape is rotated (rotation center follows the shape)
+        const rotation = getRotation($obj);
+        if (rotation !== 0) {
+          setRotation($obj, rotation);
+        }
+      }
+
+      // ========================================
+      // HIGHLIGHT UTILITIES
+      // ========================================
+
+      function ensureHighlightLayer() {
+        // Ensure highlight layer exists (in case it's missing)
+        let highlightLayer = document.getElementById("highlight-layer");
+        if (!highlightLayer) {
+          highlightLayer = document.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "g"
+          );
+          highlightLayer.setAttribute("id", "highlight-layer");
+          document.getElementById("viewport-group").appendChild(highlightLayer);
+        }
+
+        let hoverHighlights = document.getElementById("hover-highlights");
+        if (!hoverHighlights) {
+          hoverHighlights = document.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "g"
+          );
+          hoverHighlights.setAttribute("id", "hover-highlights");
+          highlightLayer.appendChild(hoverHighlights);
+        }
+
+        let selectionHighlights = document.getElementById(
+          "selection-highlights"
+        );
+        if (!selectionHighlights) {
+          selectionHighlights = document.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "g"
+          );
+          selectionHighlights.setAttribute("id", "selection-highlights");
+          highlightLayer.appendChild(selectionHighlights);
+        }
+      }
+
+      function createOutlineElement($obj) {
+        const tagName = $obj.prop("tagName");
+        let outlineEl;
+
+        if (tagName === "rect") {
+          const x = parseFloat($obj.attr("x"));
+          const y = parseFloat($obj.attr("y"));
+          const width = parseFloat($obj.attr("width"));
+          const height = parseFloat($obj.attr("height"));
+
+          outlineEl = document.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "rect"
+          );
+          outlineEl.setAttribute("x", x);
+          outlineEl.setAttribute("y", y);
+          outlineEl.setAttribute("width", width);
+          outlineEl.setAttribute("height", height);
+        } else if (tagName === "ellipse") {
+          const cx = parseFloat($obj.attr("cx"));
+          const cy = parseFloat($obj.attr("cy"));
+          const rx = parseFloat($obj.attr("rx"));
+          const ry = parseFloat($obj.attr("ry"));
+
+          outlineEl = document.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "ellipse"
+          );
+          outlineEl.setAttribute("cx", cx);
+          outlineEl.setAttribute("cy", cy);
+          outlineEl.setAttribute("rx", rx);
+          outlineEl.setAttribute("ry", ry);
+        }
+
+        return outlineEl;
+      }
+
+      function getBoundingBox($obj) {
+        const tagName = $obj.prop("tagName");
+        let bbox;
+
+        if (tagName === "rect") {
+          const x = parseFloat($obj.attr("x"));
+          const y = parseFloat($obj.attr("y"));
+          const width = parseFloat($obj.attr("width"));
+          const height = parseFloat($obj.attr("height"));
+          bbox = { x, y, width, height };
+        } else if (tagName === "ellipse") {
+          const cx = parseFloat($obj.attr("cx"));
+          const cy = parseFloat($obj.attr("cy"));
+          const rx = parseFloat($obj.attr("rx"));
+          const ry = parseFloat($obj.attr("ry"));
+          bbox = { x: cx - rx, y: cy - ry, width: rx * 2, height: ry * 2 };
+        }
+
+        return bbox;
+      }
+
+      function createRotatedGroup($obj, ...children) {
+        const rotation = getRotation($obj);
+        const center = getCenter($obj);
+
+        const group = document.createElementNS(
+          "http://www.w3.org/2000/svg",
+          "g"
+        );
+        if (rotation !== 0) {
+          group.setAttribute(
+            "transform",
+            `rotate(${rotation}, ${center.cx}, ${center.cy})`
+          );
+        }
+
+        children.forEach((child) => {
+          if (child) group.appendChild(child);
+        });
+
+        return group;
+      }
+
+      // ========================================
+      // SELECTION & HIGHLIGHT LAYER
+      // ========================================
+      const $highlightLayer = $("#highlight-layer");
+
+      function clearHighlightLayer() {
+        // Clear individual groups instead of emptying the whole layer
+        $("#hover-highlights").empty();
+        $("#selection-highlights").empty();
+      }
+
+      function clearHoverHighlight() {
+        $("#hover-highlights").empty();
+      }
+
+      function renderHoverHighlight($obj) {
+        if (!$obj || !$obj.length) return;
+
+        ensureHighlightLayer();
+
+        const outlineEl = createOutlineElement($obj);
+        if (!outlineEl) return;
+
+        outlineEl.setAttribute("fill", "none");
+        outlineEl.setAttribute("stroke", "#00A0FA");
+        outlineEl.setAttribute("stroke-width", "1");
+        outlineEl.setAttribute("pointer-events", "none");
+
+        const group = createRotatedGroup($obj, outlineEl);
+        document.getElementById("hover-highlights").appendChild(group);
+      }
+
+      function renderSelectionHighlight($obj) {
+        ensureHighlightLayer();
+        $("#selection-highlights").empty();
+        if (!$obj || !$obj.length) return;
+
+        const outlineEl = createOutlineElement($obj);
+        const bbox = getBoundingBox($obj);
+        if (!outlineEl || !bbox) return;
+
+        // Shape outline
+        outlineEl.setAttribute("fill", "none");
+        outlineEl.setAttribute("stroke", "#00A0FA");
+        outlineEl.setAttribute("stroke-width", "1");
+        outlineEl.setAttribute("pointer-events", "none");
+
+        // Bounding box
+        const bboxEl = document.createElementNS(
+          "http://www.w3.org/2000/svg",
+          "rect"
+        );
+        bboxEl.setAttribute("x", bbox.x);
+        bboxEl.setAttribute("y", bbox.y);
+        bboxEl.setAttribute("width", bbox.width);
+        bboxEl.setAttribute("height", bbox.height);
+        bboxEl.setAttribute("fill", "none");
+        bboxEl.setAttribute("stroke", "#00A0FA");
+        bboxEl.setAttribute("stroke-width", "1");
+        bboxEl.setAttribute("pointer-events", "none");
+
+        // Corner handles
+        const handleSize = 4;
+        const handles = [
+          { x: bbox.x, y: bbox.y, cursor: "nw-resize", handle: "nw" },
+          {
+            x: bbox.x + bbox.width / 2,
+            y: bbox.y,
+            cursor: "n-resize",
+            handle: "n",
+          },
+          {
+            x: bbox.x + bbox.width,
+            y: bbox.y,
+            cursor: "ne-resize",
+            handle: "ne",
+          },
+          {
+            x: bbox.x + bbox.width,
+            y: bbox.y + bbox.height / 2,
+            cursor: "e-resize",
+            handle: "e",
+          },
+          {
+            x: bbox.x + bbox.width,
+            y: bbox.y + bbox.height,
+            cursor: "se-resize",
+            handle: "se",
+          },
+          {
+            x: bbox.x + bbox.width / 2,
+            y: bbox.y + bbox.height,
+            cursor: "s-resize",
+            handle: "s",
+          },
+          {
+            x: bbox.x,
+            y: bbox.y + bbox.height,
+            cursor: "sw-resize",
+            handle: "sw",
+          },
+          {
+            x: bbox.x,
+            y: bbox.y + bbox.height / 2,
+            cursor: "w-resize",
+            handle: "w",
+          },
+        ];
+
+        const handleEls = handles.map((handle) => {
+          const handleEl = document.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "rect"
+          );
+          handleEl.setAttribute("x", handle.x - handleSize / 2);
+          handleEl.setAttribute("y", handle.y - handleSize / 2);
+          handleEl.setAttribute("width", handleSize);
+          handleEl.setAttribute("height", handleSize);
+          handleEl.setAttribute("fill", "white");
+          handleEl.setAttribute("stroke", "#00A0FA");
+          handleEl.setAttribute("stroke-width", "1");
+          handleEl.setAttribute("pointer-events", "all");
+          handleEl.setAttribute("data-handle", handle.handle);
+          handleEl.setAttribute("class", "resize-handle");
+          handleEl.style.cursor = handle.cursor;
+          return handleEl;
+        });
+
+        // Rotation handle
+        const rotateHandleY = bbox.y - 20;
+        const rotateHandleX = bbox.x + bbox.width / 2;
+
+        const lineEl = document.createElementNS(
+          "http://www.w3.org/2000/svg",
+          "line"
+        );
+        lineEl.setAttribute("x1", rotateHandleX);
+        lineEl.setAttribute("y1", bbox.y);
+        lineEl.setAttribute("x2", rotateHandleX);
+        lineEl.setAttribute("y2", rotateHandleY);
+        lineEl.setAttribute("stroke", "#00A0FA");
+        lineEl.setAttribute("stroke-width", "1");
+        lineEl.setAttribute("pointer-events", "none");
+
+        const rotateHandle = document.createElementNS(
+          "http://www.w3.org/2000/svg",
+          "circle"
+        );
+        rotateHandle.setAttribute("cx", rotateHandleX);
+        rotateHandle.setAttribute("cy", rotateHandleY);
+        rotateHandle.setAttribute("r", "6");
+        rotateHandle.setAttribute("fill", "white");
+        rotateHandle.setAttribute("stroke", "#00A0FA");
+        rotateHandle.setAttribute("stroke-width", "1");
+        rotateHandle.setAttribute("pointer-events", "all");
+        rotateHandle.setAttribute("data-handle", "rotate");
+        rotateHandle.setAttribute("class", "rotation-handle");
+        rotateHandle.style.cursor = "grab";
+
+        // Size label
+        const labelText = `${Math.round(bbox.width)} × ${Math.round(
+          bbox.height
+        )}`;
+        const labelX = bbox.x + bbox.width / 2;
+        const labelY = bbox.y + bbox.height + 20;
+
+        const labelEl = document.createElementNS(
+          "http://www.w3.org/2000/svg",
+          "text"
+        );
+        labelEl.setAttribute("x", labelX);
+        labelEl.setAttribute("y", labelY);
+        labelEl.setAttribute("text-anchor", "middle");
+        labelEl.setAttribute("fill", "white");
+        labelEl.setAttribute("font-size", "8");
+        labelEl.setAttribute("font-family", "sans-serif");
+        labelEl.setAttribute("pointer-events", "none");
+        labelEl.textContent = labelText;
+
+        const labelBg = document.createElementNS(
+          "http://www.w3.org/2000/svg",
+          "rect"
+        );
+        labelBg.setAttribute("fill", "#00A0FA");
+        labelBg.setAttribute("rx", "3");
+        labelBg.setAttribute("pointer-events", "none");
+
+        // Create rotated group with all elements
+        const group = createRotatedGroup(
+          $obj,
+          outlineEl,
+          bboxEl,
+          ...handleEls,
+          lineEl,
+          rotateHandle,
+          labelBg,
+          labelEl
+        );
+
+        // Calculate label background size after it's in the DOM
+        document.getElementById("selection-highlights").appendChild(group);
+        const textBBox = labelEl.getBBox();
+        labelBg.setAttribute("x", textBBox.x - 3);
+        labelBg.setAttribute("y", textBBox.y - 1);
+        labelBg.setAttribute("width", textBBox.width + 6);
+        labelBg.setAttribute("height", textBBox.height + 2);
+
+        // Move label background before text
+        group.insertBefore(labelBg, labelEl);
+      }
+
+      function selectObject($obj) {
+        // Disconnect previous observer
+        if (selectionObserver) {
+          selectionObserver.disconnect();
+          selectionObserver = null;
+        }
+
+        $(".svg-object").removeClass("selected");
+        $(".layer-item").removeClass("selected");
+        $selectedObject = null;
+        clearHighlightLayer();
+
+        if ($obj && $obj.length) {
+          $obj.addClass("selected");
+          $selectedObject = $obj;
+
+          // Highlight in layers panel
+          const id = $obj.attr("data-id");
+          $(`.layer-item[data-id="${id}"]`).addClass("selected");
+
+          // Initial highlight render
+          renderSelectionHighlight($obj);
+
+          // Setup observer to auto-update highlight when object changes
+          selectionObserver = new MutationObserver(() => {
+            renderSelectionHighlight($selectedObject);
+          });
+
+          selectionObserver.observe($obj[0], {
+            attributes: true,
+            attributeFilter: [
+              "x",
+              "y",
+              "width",
+              "height",
+              "cx",
+              "cy",
+              "rx",
+              "ry",
+              "transform",
+            ],
+          });
+
+          updatePropertiesPanel();
+        }
+      }
+
+      // ========================================
+      // UI UPDATES
+      // ========================================
+      function updatePropertiesPanel() {
+        const $propX = $("#prop-x");
+        const $propY = $("#prop-y");
+        const $propW = $("#prop-w");
+        const $propH = $("#prop-h");
+        const $propRotation = $("#prop-rotation");
+        const $fillColor = $("#fill-color");
+        const $strokeColor = $("#stroke-color");
+        const $strokeWidth = $("#stroke-width");
+
+        if ($selectedObject) {
+          const tagName = $selectedObject.prop("tagName");
+
+          if (tagName === "rect") {
+            $propX.val(Math.round($selectedObject.attr("x")));
+            $propY.val(Math.round($selectedObject.attr("y")));
+            $propW.val(Math.round($selectedObject.attr("width")));
+            $propH.val(Math.round($selectedObject.attr("height")));
+          } else if (tagName === "ellipse") {
+            const cx = parseFloat($selectedObject.attr("cx"));
+            const cy = parseFloat($selectedObject.attr("cy"));
+            const rx = parseFloat($selectedObject.attr("rx"));
+            const ry = parseFloat($selectedObject.attr("ry"));
+            $propX.val(Math.round(cx - rx));
+            $propY.val(Math.round(cy - ry));
+            $propW.val(Math.round(rx * 2));
+            $propH.val(Math.round(ry * 2));
+          }
+
+          const fillColor = $selectedObject.attr("fill") || "#000000";
+          const strokeColor = $selectedObject.attr("stroke") || "#000000";
+          const rotation = Math.round(getRotation($selectedObject));
+
+          $fillColor.val(fillColor);
+          $strokeColor.val(strokeColor);
+          $strokeWidth.val($selectedObject.attr("stroke-width") || 1);
+          $propRotation.val(rotation);
+
+          // Update hex input
+          $("#fill-hex").val(fillColor);
+        } else {
+          $propX.val("");
+          $propY.val("");
+          $propW.val("");
+          $propH.val("");
+          $propRotation.val(0);
+          $strokeWidth.val(1);
+          $("#fill-hex").val("#000000");
+        }
+      }
+
+      function updateLayersPanel() {
+        const $panel = $("#layers-panel");
+        $panel.empty();
+
+        // Reverse order (top to bottom)
+        const $objects = $(".svg-object").get().reverse();
+
+        $objects.forEach((obj) => {
+          const $obj = $(obj);
+          const id = $obj.attr("data-id");
+          const name =
+            $obj.attr("data-name") ||
+            ($obj.prop("tagName") === "rect" ? "rectangle" : "ellipse") +
+              " " +
+              id;
+          const type =
+            $obj.prop("tagName") === "rect" ? "rectangle" : "ellipse";
+          const icon = type === "rectangle" ? "□" : "○";
+
+          const $item = $(`<li class="layer-item" data-id="${id}">
+            <div class="layer-info">
+                <span class="layer-icon">${icon}</span>
+                <span class="layer-name" spellcheck="false">${name}</span>
+            </div>
+        </li>`);
+
+          if ($selectedObject && $selectedObject.attr("data-id") === id) {
+            $item.addClass("selected");
+          }
+
+          // Click to select
+          $item.on("click", (e) => {
+            // Don't select if clicking on the name while editing
+            if (
+              $(e.target).hasClass("layer-name") &&
+              $(e.target).attr("contenteditable") === "true"
+            ) {
+              return;
+            }
+            selectObject($obj);
+          });
+
+          // Double-click to edit name
+          const $nameSpan = $item.find(".layer-name");
+          $nameSpan.on("dblclick", function (e) {
+            e.stopPropagation();
+            e.preventDefault();
+            $(this).attr("contenteditable", "true");
+            $(this).focus();
+            // Disable dragging on the parent while editing
+            $item.attr("draggable", "false");
+            // Select all text
+            const range = document.createRange();
+            range.selectNodeContents(this);
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+          });
+
+          $nameSpan.on("blur", function () {
+            $(this).attr("contenteditable", "false");
+            // Re-enable dragging after editing
+            $item.attr("draggable", "true");
+            let newName = $(this).text().trim();
+            const oldName = $obj.attr("data-name") || name;
+
+            // Validation: Check if empty
+            if (!newName) {
+              newName = oldName; // Revert to old name
+              $(this).text(oldName);
+              return;
+            }
+
+            // Validation: Check if duplicate (case-insensitive)
+            let isDuplicate = false;
+            $(".svg-object").each(function () {
+              const existingName = $(this).attr("data-name") || "";
+              const existingId = $(this).attr("data-id");
+              // Don't compare with itself
+              if (
+                existingId !== id &&
+                existingName.toLowerCase() === newName.toLowerCase()
+              ) {
+                isDuplicate = true;
+                return false; // Break the loop
+              }
+            });
+
+            if (isDuplicate) {
+              // Revert to old name
+              $(this).text(oldName);
+              toast("Layer name already exists", "error");
+              return;
+            }
+
+            // Update the name
+            $obj.attr("data-name", newName);
+            triggerSave();
+          });
+
+          $nameSpan.on("keydown", function (e) {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              $(this).blur();
+            }
+            e.stopPropagation();
+          });
+
+          $panel.append($item);
+        });
+      }
+
+      // ========================================
+      // LAYER REORDERING (via sortable)
+      // ========================================
+      // Observer to sync SVG z-order with layer panel order when user drags layers
+      const layerPanelObserver = new MutationObserver(() => {
+        syncSVGOrderFromLayerPanel();
+      });
+
+      function syncSVGOrderFromLayerPanel() {
+        // Get current layer panel order (reversed because layers are displayed top-to-bottom)
+        const layerOrder = [];
+        $("#layers-panel .layer-item").each(function () {
+          layerOrder.push($(this).attr("data-id"));
+        });
+        layerOrder.reverse(); // Reverse to match SVG z-order (first in DOM = bottom)
+
+        // Reorder SVG objects to match
+        layerOrder.forEach((id) => {
+          const $obj = $(`.svg-object[data-id="${id}"]`);
+          if ($obj.length) {
+            $highlightLayer.before($obj); // Keep highlight layer on top
+          }
+        });
+
+        triggerSave();
+      }
+
+      // Start observing the layers panel for reordering
+      $(document).ready(() => {
+        const layersPanel = document.getElementById("layers-panel");
+        if (layersPanel) {
+          layerPanelObserver.observe(layersPanel, {
+            childList: true,
+          });
+        }
+
+        // Restore selection from saved state
+        const $selected = $(".svg-object.selected");
+        if ($selected.length) {
+          $selectedObject = $selected;
+          // Highlights are already in the DOM from save, but ensure they match current state
+          renderSelectionHighlight($selectedObject);
+        }
+      });
+
+      // ========================================
+      // DRAWING TOOLS
+      // ========================================
+      function getMousePos(e) {
+        const rect = $svg[0].getBoundingClientRect();
+        const screenX = e.clientX - rect.left;
+        const screenY = e.clientY - rect.top;
+
+        // Account for viewport transform (pan and zoom)
+        const viewportX = parseFloat($svg.attr("data-viewport-x") || 0);
+        const viewportY = parseFloat($svg.attr("data-viewport-y") || 0);
+        const zoom = parseFloat($svg.attr("data-viewport-zoom") || 1);
+
+        // Convert screen coordinates to viewport group coordinates
+        const x = (screenX - viewportX) / zoom;
+        const y = (screenY - viewportY) / zoom;
+
+        return { x, y };
+      }
+
+      $svg.on("mousedown", (e) => {
+        console.log("Mousedown on SVG", e.target);
+        console.log("Current tool:", currentTool);
+
+        const pos = getMousePos(e);
+        console.log("Mouse position:", pos);
+
+        // Spacebar pan
+        if (isSpacePressed) {
+          isPanning = true;
+          panStartX = e.clientX;
+          panStartY = e.clientY;
+          $("body").css("cursor", "grabbing");
+          $svg.css("cursor", "grabbing");
+          return;
+        }
+
+        if (currentTool === "select") {
+          // Check if clicked on object
+          const $target = $(e.target);
+          if ($target.hasClass("svg-object")) {
+            selectObject($target);
+            isDragging = true;
+            hasDragged = false; // Track if actual movement occurs
+            startX = pos.x;
+            startY = pos.y;
+            dragStartRotation = getRotation($target);
+          } else {
+            selectObject(null);
+          }
+        } else {
+          // Start drawing
+          console.log("Starting to draw", currentTool);
+          isDrawing = true;
+          startX = pos.x;
+          startY = pos.y;
+
+          // Hide highlights while drawing
+          clearHighlightLayer();
+
+          const fillColor = $("#fill-color").val();
+          const strokeColor = $("#stroke-color").val();
+          const strokeWidth = parseFloat($("#stroke-width").val()) || 1;
+
+          if (currentTool === "rectangle") {
+            const rect = document.createElementNS(
+              "http://www.w3.org/2000/svg",
+              "rect"
+            );
+            rect.setAttribute("x", startX);
+            rect.setAttribute("y", startY);
+            rect.setAttribute("width", 0);
+            rect.setAttribute("height", 0);
+            rect.setAttribute("fill", fillColor);
+            rect.setAttribute("stroke", strokeColor);
+            rect.setAttribute("stroke-width", strokeWidth);
+            rect.setAttribute("class", "svg-object");
+            rect.setAttribute("data-id", nextObjectId);
+            $tempShape = $(rect);
+            console.log("Created rectangle:", $tempShape);
+          } else if (currentTool === "circle") {
+            const ellipse = document.createElementNS(
+              "http://www.w3.org/2000/svg",
+              "ellipse"
+            );
+            ellipse.setAttribute("cx", startX);
+            ellipse.setAttribute("cy", startY);
+            ellipse.setAttribute("rx", 0);
+            ellipse.setAttribute("ry", 0);
+            ellipse.setAttribute("fill", fillColor);
+            ellipse.setAttribute("stroke", strokeColor);
+            ellipse.setAttribute("stroke-width", strokeWidth);
+            ellipse.setAttribute("class", "svg-object");
+            ellipse.setAttribute("data-id", nextObjectId);
+            $tempShape = $(ellipse);
+            console.log("Created ellipse:", $tempShape);
+          }
+
+          if ($tempShape) {
+            // Insert before highlight layer so highlights always appear on top
+            $highlightLayer.before($tempShape);
+            console.log("Appended shape to viewport");
+          }
+        }
+      });
+
+      $svg.on("mousemove", (e) => {
+        const pos = getMousePos(e);
+
+        // Handle panning
+        if (isPanning) {
+          const dx = e.clientX - panStartX;
+          const dy = e.clientY - panStartY;
+
+          const x = parseFloat($svg.attr("data-viewport-x") || 0);
+          const y = parseFloat($svg.attr("data-viewport-y") || 0);
+          const zoom = parseFloat($svg.attr("data-viewport-zoom") || 1);
+
+          const newX = x + dx;
+          const newY = y + dy;
+
+          $svg.attr("data-viewport-x", newX);
+          $svg.attr("data-viewport-y", newY);
+
+          $viewport.attr(
+            "transform",
+            `translate(${newX},${newY}) scale(${zoom})`
+          );
+
+          panStartX = e.clientX;
+          panStartY = e.clientY;
+          return;
+        }
+
+        if (isDragging && $selectedObject) {
+          const dx = pos.x - startX;
+          const dy = pos.y - startY;
+
+          if (dx !== 0 || dy !== 0) {
+            hasDragged = true; // Mark that actual movement occurred
+          }
+
+          moveShape($selectedObject, dx, dy);
+
+          startX = pos.x;
+          startY = pos.y;
+          updatePropertiesPanel();
+        } else if (isRotating && $selectedObject && rotationCenter) {
+          // Calculate angle from center to current mouse position
+          const angleStart = Math.atan2(
+            rotationStartMouse.y - rotationCenter.cy,
+            rotationStartMouse.x - rotationCenter.cx
+          );
+          const angleCurrent = Math.atan2(
+            pos.y - rotationCenter.cy,
+            pos.x - rotationCenter.cx
+          );
+
+          // Convert from radians to degrees
+          const angleDelta = (angleCurrent - angleStart) * (180 / Math.PI);
+          const newAngle = rotationStartAngle + angleDelta;
+
+          if (angleDelta !== 0) {
+            hasRotated = true; // Mark that actual rotation occurred
+          }
+
+          setRotation($selectedObject, newAngle);
+          renderSelectionHighlight($selectedObject);
+          updatePropertiesPanel();
+        } else if (isResizing && $selectedObject && resizeStartBBox) {
+          const dx = pos.x - resizeStartMouse.x;
+          const dy = pos.y - resizeStartMouse.y;
+
+          if (dx !== 0 || dy !== 0) {
+            hasResized = true; // Mark that actual resizing occurred
+          }
+
+          let newBBox = { ...resizeStartBBox };
+          const minSize = 5;
+
+          // Calculate new bbox based on active handle
+          switch (activeHandle) {
+            case "nw": // Top-left
+              newBBox.x = resizeStartBBox.x + dx;
+              newBBox.y = resizeStartBBox.y + dy;
+              newBBox.width = resizeStartBBox.width - dx;
+              newBBox.height = resizeStartBBox.height - dy;
+              break;
+            case "n": // Top
+              newBBox.y = resizeStartBBox.y + dy;
+              newBBox.height = resizeStartBBox.height - dy;
+              break;
+            case "ne": // Top-right
+              newBBox.y = resizeStartBBox.y + dy;
+              newBBox.width = resizeStartBBox.width + dx;
+              newBBox.height = resizeStartBBox.height - dy;
+              break;
+            case "e": // Right
+              newBBox.width = resizeStartBBox.width + dx;
+              break;
+            case "se": // Bottom-right
+              newBBox.width = resizeStartBBox.width + dx;
+              newBBox.height = resizeStartBBox.height + dy;
+              break;
+            case "s": // Bottom
+              newBBox.height = resizeStartBBox.height + dy;
+              break;
+            case "sw": // Bottom-left
+              newBBox.x = resizeStartBBox.x + dx;
+              newBBox.width = resizeStartBBox.width - dx;
+              newBBox.height = resizeStartBBox.height + dy;
+              break;
+            case "w": // Left
+              newBBox.x = resizeStartBBox.x + dx;
+              newBBox.width = resizeStartBBox.width - dx;
+              break;
+          }
+
+          // Maintain aspect ratio when Shift is pressed (for corner handles)
+          if (
+            isShiftPressed &&
+            (activeHandle === "nw" ||
+              activeHandle === "ne" ||
+              activeHandle === "se" ||
+              activeHandle === "sw")
+          ) {
+            const aspectRatio = resizeStartBBox.width / resizeStartBBox.height;
+
+            // Use the larger dimension change to maintain aspect ratio
+            const widthChange = Math.abs(newBBox.width - resizeStartBBox.width);
+            const heightChange = Math.abs(
+              newBBox.height - resizeStartBBox.height
+            );
+
+            if (widthChange > heightChange) {
+              // Width is driving - adjust height
+              const newHeight = newBBox.width / aspectRatio;
+              const heightDiff = newHeight - newBBox.height;
+
+              if (activeHandle.includes("n")) {
+                newBBox.y -= heightDiff;
+              }
+              newBBox.height = newHeight;
+            } else {
+              // Height is driving - adjust width
+              const newWidth = newBBox.height * aspectRatio;
+              const widthDiff = newWidth - newBBox.width;
+
+              if (activeHandle.includes("w")) {
+                newBBox.x -= widthDiff;
+              }
+              newBBox.width = newWidth;
+            }
+          }
+
+          // Enforce minimum size
+          if (newBBox.width < minSize) {
+            if (activeHandle.includes("w")) {
+              newBBox.x = resizeStartBBox.x + resizeStartBBox.width - minSize;
+            }
+            newBBox.width = minSize;
+          }
+          if (newBBox.height < minSize) {
+            if (activeHandle.includes("n")) {
+              newBBox.y = resizeStartBBox.y + resizeStartBBox.height - minSize;
+            }
+            newBBox.height = minSize;
+          }
+
+          // Apply to object
+          setShapeFromBBox($selectedObject, newBBox);
+
+          updatePropertiesPanel();
+        } else if (isDrawing && $tempShape) {
+          console.log(
+            "Drawing - isDrawing:",
+            isDrawing,
+            "$tempShape:",
+            $tempShape
+          );
+          if (currentTool === "rectangle") {
+            let x = Math.min(startX, pos.x);
+            let y = Math.min(startY, pos.y);
+            let w = Math.abs(pos.x - startX);
+            let h = Math.abs(pos.y - startY);
+
+            // Make square when Shift is pressed
+            if (isShiftPressed) {
+              const size = Math.max(w, h);
+              w = size;
+              h = size;
+
+              // Adjust position based on drag direction
+              if (pos.x < startX) x = startX - size;
+              if (pos.y < startY) y = startY - size;
+            }
+
+            console.log("Updating rectangle:", { x, y, w, h });
+            $tempShape.attr({ x, y, width: w, height: h });
+          } else if (currentTool === "circle") {
+            let rx = Math.abs(pos.x - startX);
+            let ry = Math.abs(pos.y - startY);
+
+            // Make circle when Shift is pressed
+            if (isShiftPressed) {
+              const r = Math.max(rx, ry);
+              rx = r;
+              ry = r;
+            }
+
+            console.log("Updating ellipse radii:", { rx, ry });
+            $tempShape.attr({ rx, ry });
+          }
+        }
+      });
+
+      $svg.on("mouseup", (e) => {
+        if (isPanning) {
+          isPanning = false;
+          if (isSpacePressed) {
+            $("body").css("cursor", "grab");
+            $svg.css("cursor", "grab");
+          } else {
+            $("body").css("cursor", "");
+            $svg.css("cursor", "");
+          }
+          return;
+        }
+
+        if (isRotating) {
+          isRotating = false;
+          rotationStartAngle = null;
+          rotationStartMouse = null;
+          rotationCenter = null;
+          $(".rotation-handle").css("cursor", "grab");
+          if (hasRotated) {
+            triggerSave(); // Only save if shape actually rotated
+          }
+          hasRotated = false;
+        } else if (isResizing) {
+          isResizing = false;
+          activeHandle = null;
+          resizeStartBBox = null;
+          resizeStartMouse = null;
+          if (hasResized) {
+            triggerSave(); // Only save if shape actually resized
+          }
+          hasResized = false;
+        } else if (isDragging) {
+          isDragging = false;
+          if (hasDragged) {
+            triggerSave(); // Only save if shape actually moved
+          }
+          hasDragged = false;
+        } else if (isDrawing) {
+          isDrawing = false;
+          const $newShape = $tempShape;
+          nextObjectId++;
+          updateLayersPanel();
+          triggerSave();
+          $tempShape = null;
+
+          // Switch back to select tool and select the new shape
+          $('[data-tool="select"]').click();
+          selectObject($newShape);
+        }
+      });
+
+      // ========================================
+      // TOOLBAR
+      // ========================================
+      $(".tool-btn").on("click", function () {
+        $(".tool-btn").removeClass("active");
+        $(this).addClass("active");
+        currentTool = $(this).attr("data-tool");
+        selectObject(null);
+      });
+
+      // ========================================
+      // COLOR CHANGES
+      // ========================================
+      $("#fill-color").on("input change", () => {
+        const color = $("#fill-color").val();
+        if (!color) return;
+
+        $("#fill-hex").val(color); // Sync hex input
+
+        if ($selectedObject) {
+          $selectedObject.attr("fill", color);
+          triggerSave();
+        }
+      });
+
+      $("#fill-hex").on("input", () => {
+        let hex = $("#fill-hex").val();
+        if (!hex) return;
+
+        hex = hex.trim();
+
+        // Auto-add # if missing
+        if (hex && !hex.startsWith("#")) {
+          hex = "#" + hex;
+          $("#fill-hex").val(hex);
+        }
+
+        // Validate hex color (3 or 6 digit)
+        if (/^#([0-9A-Fa-f]{3}){1,2}$/.test(hex)) {
+          $("#fill-color").val(hex); // Sync color picker
+
+          if ($selectedObject) {
+            $selectedObject.attr("fill", hex);
+            triggerSave();
+          }
+        }
+      });
+
+      $("#stroke-color").on("input change", () => {
+        const color = $("#stroke-color").val();
+        if (!color) return;
+
+        if ($selectedObject) {
+          $selectedObject.attr("stroke", color);
+          triggerSave();
+        }
+      });
+
+      $("#stroke-width").on("input change", () => {
+        if ($selectedObject) {
+          const value = $("#stroke-width").val();
+          const width = value === "" ? 1 : parseFloat(value);
+          if (!isNaN(width) && width >= 0) {
+            $selectedObject.attr("stroke-width", width);
+            // Update input to show the default value if it was empty
+            if (value === "") {
+              $("#stroke-width").val(1);
+            }
+            triggerSave();
+          }
+        }
+      });
+
+      // ========================================
+      // DIMENSION EDITING
+      // ========================================
+      $("#prop-x, #prop-y, #prop-w, #prop-h").on("input change", function () {
+        if (!$selectedObject) return;
+
+        const x = parseFloat($("#prop-x").val());
+        const y = parseFloat($("#prop-y").val());
+        const w = parseFloat($("#prop-w").val());
+        const h = parseFloat($("#prop-h").val());
+
+        if (isNaN(x) || isNaN(y) || isNaN(w) || isNaN(h)) return;
+        if (w < 1 || h < 1) return; // Minimum size
+
+        const tagName = $selectedObject.prop("tagName");
+
+        if (tagName === "rect") {
+          $selectedObject.attr("x", x);
+          $selectedObject.attr("y", y);
+          $selectedObject.attr("width", w);
+          $selectedObject.attr("height", h);
+        } else if (tagName === "ellipse") {
+          const cx = x + w / 2;
+          const cy = y + h / 2;
+          const rx = w / 2;
+          const ry = h / 2;
+          $selectedObject.attr("cx", cx);
+          $selectedObject.attr("cy", cy);
+          $selectedObject.attr("rx", rx);
+          $selectedObject.attr("ry", ry);
+        }
+
+        triggerSave();
+      });
+
+      // ========================================
+      // ROTATION INPUT
+      // ========================================
+      $("#prop-rotation").on("input change", function () {
+        if (!$selectedObject) return;
+
+        const angle = parseFloat($("#prop-rotation").val());
+        if (isNaN(angle)) return;
+
+        setRotation($selectedObject, angle);
+        renderSelectionHighlight($selectedObject);
+        triggerSave();
+      });
+
+      // ========================================
+      // ROTATION HANDLE
+      // ========================================
+      $svg.on("mousedown", ".rotation-handle", function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (!$selectedObject) return;
+
+        isRotating = true;
+        hasRotated = false; // Track if actual rotation occurs
+        const pos = getMousePos(e);
+        const center = getCenter($selectedObject);
+        rotationCenter = center;
+        rotationStartMouse = pos;
+        rotationStartAngle = getRotation($selectedObject);
+
+        // Change cursor to grabbing
+        $(this).css("cursor", "grabbing");
+      });
+
+      // ========================================
+      // RESIZE HANDLES
+      // ========================================
+      $svg.on("mousedown", ".resize-handle", function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (!$selectedObject) return;
+
+        isResizing = true;
+        hasResized = false; // Track if actual resizing occurs
+        activeHandle = $(this).attr("data-handle");
+
+        const pos = getMousePos(e);
+        resizeStartMouse = { x: pos.x, y: pos.y };
+
+        // Get current bounding box
+        const tagName = $selectedObject.prop("tagName");
+        if (tagName === "rect") {
+          resizeStartBBox = {
+            x: parseFloat($selectedObject.attr("x")),
+            y: parseFloat($selectedObject.attr("y")),
+            width: parseFloat($selectedObject.attr("width")),
+            height: parseFloat($selectedObject.attr("height")),
+          };
+        } else if (tagName === "ellipse") {
+          const cx = parseFloat($selectedObject.attr("cx"));
+          const cy = parseFloat($selectedObject.attr("cy"));
+          const rx = parseFloat($selectedObject.attr("rx"));
+          const ry = parseFloat($selectedObject.attr("ry"));
+          resizeStartBBox = {
+            x: cx - rx,
+            y: cy - ry,
+            width: rx * 2,
+            height: ry * 2,
+          };
+        }
+      });
+
+      // ========================================
+      // HOVER HIGHLIGHTS
+      // ========================================
+      $svg.on("mouseover", ".svg-object", function (e) {
+        const $obj = $(this);
+
+        // Don't show hover if currently drawing, dragging, resizing, or rotating
+        if (isDrawing || isDragging || isResizing || isRotating) {
+          return;
+        }
+
+        // Don't show hover if object is already selected
+        if ($selectedObject && $selectedObject[0] === $obj[0]) {
+          return;
+        }
+
+        clearHoverHighlight();
+        renderHoverHighlight($obj);
+      });
+
+      $svg.on("mouseout", ".svg-object", function (e) {
+        clearHoverHighlight();
+      });
+
+      // ========================================
+      // KEYBOARD SHORTCUTS
+      // ========================================
+      $(document).on("keydown", (e) => {
+        // Don't trigger shortcuts if editing a layer name
+        const isEditingLayerName =
+          $(e.target).hasClass("layer-name") &&
+          $(e.target).attr("contenteditable") === "true";
+
+        if (isEditingLayerName) {
+          return; // Let the contenteditable handle the key press
+        }
+
+        // Spacebar for pan
+        if (e.key === " " && !isSpacePressed) {
+          e.preventDefault();
+          isSpacePressed = true;
+          $("body").css("cursor", "grab");
+          $svg.css("cursor", "grab");
+          return;
+        }
+
+        // Shift for proportional resize/create
+        if (e.key === "Shift" && !isShiftPressed) {
+          isShiftPressed = true;
+        }
+
+        // Tool shortcuts
+        if (e.key === "v" || e.key === "V") {
+          $('[data-tool="select"]').click();
+        } else if (e.key === "m" || e.key === "M") {
+          $('[data-tool="rectangle"]').click();
+        } else if (e.key === "l" || e.key === "L") {
+          $('[data-tool="circle"]').click();
+        }
+        // Delete
+        else if (
+          (e.key === "Delete" || e.key === "Backspace") &&
+          $selectedObject
+        ) {
+          $selectedObject.remove();
+          selectObject(null);
+          updateLayersPanel();
+          triggerSave();
+        }
+      });
+
+      $(document).on("keyup", (e) => {
+        if (e.key === " ") {
+          isSpacePressed = false;
+          if (!isPanning) {
+            $("body").css("cursor", "");
+            $svg.css("cursor", "");
+          }
+        }
+
+        if (e.key === "Shift") {
+          isShiftPressed = false;
+        }
+      });
+
+      // ========================================
+      // ZOOM AND PAN
+      // ========================================
+      $svg.on("wheel", (e) => {
+        e.preventDefault();
+
+        const zoom = parseFloat($svg.attr("data-viewport-zoom") || 1);
+        const x = parseFloat($svg.attr("data-viewport-x") || 0);
+        const y = parseFloat($svg.attr("data-viewport-y") || 0);
+
+        // Ctrl/Cmd + wheel = zoom
+        if (e.originalEvent.ctrlKey || e.originalEvent.metaKey) {
+          const rect = $svg[0].getBoundingClientRect();
+          const mouseX = e.clientX - rect.left;
+          const mouseY = e.clientY - rect.top;
+
+          const zoomFactor = e.originalEvent.deltaY > 0 ? 0.9 : 1.1;
+          const newZoom = Math.max(0.1, Math.min(10, zoom * zoomFactor));
+
+          // Zoom towards mouse position
+          const worldX = (mouseX - x) / zoom;
+          const worldY = (mouseY - y) / zoom;
+
+          const newX = mouseX - worldX * newZoom;
+          const newY = mouseY - worldY * newZoom;
+
+          $svg.attr("data-viewport-zoom", newZoom);
+          $svg.attr("data-viewport-x", newX);
+          $svg.attr("data-viewport-y", newY);
+
+          $viewport.attr(
+            "transform",
+            `translate(${newX},${newY}) scale(${newZoom})`
+          );
+        } else {
+          // Regular wheel = pan
+          const newX = x - e.originalEvent.deltaX;
+          const newY = y - e.originalEvent.deltaY;
+
+          $svg.attr("data-viewport-x", newX);
+          $svg.attr("data-viewport-y", newY);
+
+          $viewport.attr(
+            "transform",
+            `translate(${newX},${newY}) scale(${zoom})`
+          );
+        }
+      });
+
+      // ========================================
+      // INITIALIZATION
+      // ========================================
+      updateLayersPanel();
+      console.log("Hyperclay SVG Editor initialized!");
+    </script>
+  </body>
+</html>
